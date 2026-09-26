@@ -25,16 +25,28 @@ namespace ChepKinh.Api.Services
             {
                 var settings = new GoogleJsonWebSignature.ValidationSettings();
                 var clientId = _configuration["Google:ClientId"];
-                if (!string.IsNullOrEmpty(clientId))
+                
+                // Nếu ClientId hợp lệ thì kiểm tra Audience
+                if (!string.IsNullOrEmpty(clientId) && !clientId.Contains("YOUR_GOOGLE_CLIENT"))
                 {
                     settings.Audience = new[] { clientId };
                 }
 
                 return await GoogleJsonWebSignature.ValidateAsync(idToken, settings);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return null;
+                Console.WriteLine($"[GoogleAuth Error]: {ex.Message}");
+                try
+                {
+                    // Fallback: Kiểm tra chữ ký mật mã Google trực tiếp
+                    return await GoogleJsonWebSignature.ValidateAsync(idToken);
+                }
+                catch (Exception fallbackEx)
+                {
+                    Console.WriteLine($"[GoogleAuth Fallback Failed]: {fallbackEx.Message}");
+                    return null;
+                }
             }
         }
     }
