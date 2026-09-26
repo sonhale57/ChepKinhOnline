@@ -36,10 +36,10 @@ namespace ChepKinh.Api.Controllers
                 return BadRequest(ApiResponse<AuthResponseDto>.Fail("IdToken không được để trống."));
             }
 
-            var payload = await _googleAuthService.VerifyGoogleTokenAsync(dto.IdToken);
+            var (payload, errorMessage) = await _googleAuthService.VerifyGoogleTokenWithDetailsAsync(dto.IdToken);
             if (payload == null)
             {
-                return Unauthorized(ApiResponse<AuthResponseDto>.Fail("Xác thực Google không thành công."));
+                return Unauthorized(ApiResponse<AuthResponseDto>.Fail($"Xác thực Google không thành công: {errorMessage}"));
             }
 
             var user = await _context.Users

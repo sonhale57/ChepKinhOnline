@@ -134,7 +134,7 @@ app.UseCors("AllowFrontend");
 // 2. Global Preflight OPTIONS Handler & COOP Header
 app.Use(async (context, next) =>
 {
-    context.Response.Headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups";
+    context.Response.Headers["Cross-Origin-Opener-Policy"] = "unsafe-none";
 
     // Nếu là request Preflight OPTIONS từ trình duyệt, lập tức phản hồi 200 OK kèm đầy đủ headers
     if (HttpMethods.IsOptions(context.Request.Method))
