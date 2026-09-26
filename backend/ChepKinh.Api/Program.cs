@@ -15,7 +15,40 @@ var builder = WebApplication.CreateBuilder(args);
 // 1. Add Controllers & JSON Options
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "Chép Kinh Online API",
+        Version = "v1",
+        Description = "Hệ thống API Sổ Tay Chép Kinh A4 & Quản Trị"
+    });
+
+    // Thêm hỗ trợ Bearer Token trong Swagger UI
+    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Description = "Nhập JWT Token theo định dạng: Bearer {token}",
+        Name = "Authorization",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
 
 // 2. Database Configuration (SQL Server 2008 Compatibility Level 100)
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -89,11 +122,13 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // Configure Middleware Pipeline
-if (app.Environment.IsDevelopment())
+// Luôn bật Swagger (kể cả khi publish/production) để kiểm thử và tích hợp API
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Chép Kinh Online API v1");
+    c.RoutePrefix = "swagger";
+});
 
 app.UseCors("AllowFrontend");
 
