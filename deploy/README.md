@@ -62,3 +62,16 @@ Tại thư mục `frontend`:
    # hoặc build tĩnh cho IIS:
    npm run build
    ```
+
+---
+
+## 5. Triển Khai Frontend Lên IIS & Xử Lý Lỗi F5 (404 Page Not Found)
+
+Khi người dùng truy cập các đường dẫn con (như `/write/1`, `/profile`, `/login`) và bấm **F5 (Refresh)**, IIS sẽ tìm thư mục vật lý và báo lỗi **404 Not Found** nếu chưa có URL Rewrite.
+
+### Cách xử lý:
+1. Cài đặt **URL Rewrite Module 2.1** cho IIS trên VPS Frontend (Tải từ Microsoft: `https://www.iis.net/downloads/microsoft/url-rewrite`).
+2. Tệp `frontend/public/web.config` đã được cấu hình sẵn quy tắc URL Rewrite SPA và tự động đóng gói vào thư mục `dist/` khi chạy `npm run build`.
+3. Copy toàn bộ nội dung trong thư mục `frontend/dist` vào thư mục web trên IIS (ví dụ: `C:\inetpub\wwwroot\chepkinh-frontend`).
+4. Khi F5 ở bất kỳ trang nào, IIS sẽ tự động rewrite về `index.html` để React Router xử lý định tuyến mượt mà.
+
