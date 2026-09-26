@@ -107,9 +107,16 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("ink.sync", policy => policy.RequireClaim("permission", "ink.sync"));
 });
 
-// 6. CORS Policy cho Frontend Web/PWA
+// 6. CORS Policy cho Frontend Web/PWA (Linh hoạt cho mọi Origin/Domain & Subdomain)
 builder.Services.AddCors(options =>
 {
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.SetIsOriginAllowed(_ => true)
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
     options.AddPolicy("AllowFrontend", policy =>
     {
         policy.SetIsOriginAllowed(_ => true)
@@ -121,6 +128,36 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// 1. CORS Middleware ĐẦU TIÊN để luôn xử lý OPTIONS Preflight request từ mọi Domain/Origin
+app.UseCors("AllowFrontend");
+
+// 2. Global Preflight OPTIONS Handler & COOP Header
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups";
+
+    // Nếu là request Preflight OPTIONS từ trình duyệt, lập tức phản hồi 200 OK kèm đầy đủ headers
+    if (HttpMethods.IsOptions(context.Request.Method))
+    {
+        var origin = context.Request.Headers["Origin"].ToString();
+        if (!string.IsNullOrEmpty(origin))
+        {
+            context.Response.Headers["Access-Control-Allow-Origin"] = origin;
+        }
+        else
+        {
+            context.Response.Headers["Access-Control-Allow-Origin"] = "*";
+        }
+        context.Response.Headers["Access-Control-Allow-Headers"] = "*";
+        context.Response.Headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH";
+        context.Response.Headers["Access-Control-Allow-Credentials"] = "true";
+        context.Response.StatusCode = StatusCodes.Status200OK;
+        return;
+    }
+
+    await next();
+});
+
 // Configure Middleware Pipeline
 // Luôn bật Swagger (kể cả khi publish/production) để kiểm thử và tích hợp API
 app.UseSwagger();
@@ -129,14 +166,6 @@ app.UseSwaggerUI(c =>
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "Chép Kinh Online API v1");
     c.RoutePrefix = "swagger";
 });
-
-app.Use(async (context, next) =>
-{
-    context.Response.Headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups";
-    await next();
-});
-
-app.UseCors("AllowFrontend");
 
 app.UseStaticFiles();
 
