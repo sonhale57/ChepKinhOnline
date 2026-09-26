@@ -1,0 +1,24 @@
+{
+  "name": "Chép Kinh Online — Sổ Tay A4",
+  "short_name": "Chép Kinh",
+  "description": "Ứng dụng chép kinh theo sổ tay khổ A4 đa trang dành cho Tablet & iPad",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#FBF8F1",
+  "theme_color": "#451a03",
+  "icons": [
+    {
+      "src": "/images/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

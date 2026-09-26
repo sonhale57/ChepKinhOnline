@@ -1,0 +1,33 @@
+# .NET / C#
+**/bin/
+**/obj/
+*.user
+*.userosscache
+*.sln.docstates
+.vs/
+.vscode/
+
+# Node / React Frontend
+**/node_modules/
+**/dist/
+**/build/
+.npm
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+!frontend/.env.sample
+!frontend/.env.example
+
+# Uploaded User Files in Backend
+backend/ChepKinh.Api/wwwroot/uploads/*
+!backend/ChepKinh.Api/wwwroot/uploads/.gitkeep
+deploy/backend/wwwroot/uploads/*
+!deploy/backend/wwwroot/uploads/.gitkeep
+
+# System & OS Files
+.DS_Store
+Thumbs.db
+*.log
+
+# Root temp screenshots
+/*.png
