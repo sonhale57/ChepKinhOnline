@@ -1,0 +1,40 @@
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  RewriteRule ^index\.html$ - [L]
+  
+  # Nếu file hoặc thư mục vật lý không tồn tại, rewrite toàn bộ về index.html cho React Router SPA
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{REQUEST_FILENAME} !-l
+  RewriteRule . /index.html [L]
+</IfModule>
+
+# Tắt duyệt danh mục thư mục
+Options -Indexes
+
+# Khai báo MIME Types cho WebP, SVG, Manifest, Fonts
+<IfModule mod_mime.c>
+  AddType application/json .json
+  AddType image/webp .webp
+  AddType image/svg+xml .svg .svgz
+  AddType application/manifest+json .webmanifest .json
+  AddType font/woff .woff
+  AddType font/woff2 .woff2
+</IfModule>
+
+# Bật nén Gzip tăng tốc độ tải trang
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json image/svg+xml
+</IfModule>
+
+# Cache tĩnh cho hình ảnh và assets
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType image/webp "access plus 1 year"
+  ExpiresByType image/png "access plus 1 year"
+  ExpiresByType image/svg+xml "access plus 1 year"
+  ExpiresByType text/css "access plus 1 month"
+  ExpiresByType application/javascript "access plus 1 month"
+  ExpiresByType font/woff2 "access plus 1 year"
+</IfModule>
