@@ -253,50 +253,56 @@ export const TextPromptCard: React.FC<TextPromptCardProps> = ({
               })}
             </div>
 
-            {/* Dải HUD AI Nhận Diện Chữ Viết Tay Thời Gian Thực */}
+            {/* Dải HUD AI Nhận Diện Chữ Viết Tay Thời Gian Thực & Văn Bản Hoàn Chỉnh */}
             {(isRecognizing || recognizedText || onRecognizeNow) && (
-              <div className="mt-2.5 pt-2 border-t border-amber-900/60 flex items-center justify-between gap-2 text-[11px] flex-wrap">
-                <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                  <span className="p-1 rounded bg-amber-900/60 text-amber-300 shrink-0">
-                    <Sparkles className={`w-3 h-3 ${isRecognizing ? 'animate-spin text-amber-300' : ''}`} />
-                  </span>
-                  {isRecognizing ? (
-                    <span className="text-amber-300/90 italic flex items-center gap-1 animate-pulse">
-                      <Loader2 className="w-3 h-3 animate-spin inline" />
-                      AI đang đọc nét chữ viết tay...
+              <div className="mt-2.5 pt-2 border-t border-amber-900/60 flex flex-col gap-1.5 text-[11px]">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                    <span className="p-1 rounded bg-amber-900/60 text-amber-300 shrink-0">
+                      <Sparkles className={`w-3 h-3 ${isRecognizing ? 'animate-spin text-amber-300' : ''}`} />
                     </span>
-                  ) : recognizedText ? (
-                    <div className="truncate flex items-center gap-1.5 text-amber-200">
-                      <span className="text-amber-400 font-semibold shrink-0">AI nhận diện:</span>
-                      <span className="truncate italic text-amber-100 font-mono bg-black/40 px-1.5 py-0.5 rounded border border-amber-900/50">
-                        "{recognizedText}"
+                    <span className="text-amber-300 font-bold tracking-wide">
+                      VĂN BẢN ĐÃ NHẬN DIỆN (LIÊN TỤC):
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {similarityPercent > 0 && (
+                      <span className={`px-2 py-0.5 rounded-full font-bold text-[10.5px] border ${similarityPercent >= 70
+                        ? 'bg-emerald-950/90 text-emerald-300 border-emerald-600 shadow-xs'
+                        : 'bg-amber-900/90 text-amber-200 border-amber-700'
+                        }`}>
+                        Độ khớp: {similarityPercent}%
                       </span>
-                    </div>
-                  ) : (
-                    <span className="text-amber-400/60 italic">
-                      Viết nét chữ lên giấy để AI tự động nhận diện thành văn bản...
-                    </span>
-                  )}
+                    )}
+                    {onRecognizeNow && !isRecognizing && (
+                      <button
+                        type="button"
+                        onClick={onRecognizeNow}
+                        className="px-2 py-0.5 rounded bg-amber-900 hover:bg-amber-800 text-amber-200 text-[10.5px] font-bold transition-all border border-amber-700/50 cursor-pointer active:scale-95"
+                        title="Nhận diện lại nét chữ trên trang ngay lập tức"
+                      >
+                        Nhận diện ngay
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 shrink-0">
-                  {similarityPercent > 0 && (
-                    <span className={`px-1.5 py-0.5 rounded font-bold text-[10px] border ${similarityPercent >= 70
-                      ? 'bg-emerald-950/80 text-emerald-300 border-emerald-700/60'
-                      : 'bg-amber-900/80 text-amber-200 border-amber-700/60'
-                      }`}>
-                      Độ khớp: {similarityPercent}%
+                {/* Khung Hiển Thị Văn Bản Hoàn Chỉnh */}
+                <div className="bg-black/40 rounded-md p-2 border border-amber-900/60 min-h-[32px] flex items-center">
+                  {isRecognizing ? (
+                    <span className="text-amber-300/90 italic flex items-center gap-1.5 animate-pulse text-xs">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin inline" />
+                      AI đang nhận diện nét chữ liên tục và thêm dấu cách...
                     </span>
-                  )}
-                  {onRecognizeNow && !isRecognizing && (
-                    <button
-                      type="button"
-                      onClick={onRecognizeNow}
-                      className="px-2 py-0.5 rounded bg-amber-900 hover:bg-amber-800 text-amber-200 text-[10.5px] font-bold transition-all border border-amber-700/50 cursor-pointer active:scale-95"
-                      title="Nhận diện lại nét chữ trên trang ngay lập tức"
-                    >
-                      Nhận diện ngay
-                    </button>
+                  ) : recognizedText ? (
+                    <p className="text-amber-100 font-serif leading-relaxed text-xs sm:text-[13px] whitespace-pre-wrap select-text selection:bg-amber-700">
+                      {recognizedText}
+                    </p>
+                  ) : (
+                    <span className="text-amber-400/50 italic text-[11px]">
+                      Viết chữ liên tục trên giấy (dừng 3s AI sẽ tự nhận diện & ghép chữ có dấu cách)...
+                    </span>
                   )}
                 </div>
               </div>

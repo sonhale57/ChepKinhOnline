@@ -145,3 +145,17 @@ export function matchHandwritingWithTarget(
     matchedWordsCount: matchedCount,
   };
 }
+
+/**
+ * Định dạng văn bản nhận diện thành chuỗi hoàn chỉnh có dấu cách và xuống dòng hợp lý
+ */
+export function cleanAndFormatHandwritingStream(text: string): string {
+  if (!text) return '';
+  return text
+    .replace(/\r\n/g, '\n')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n\s+/g, '\n')
+    .replace(/\s+\n/g, '\n')
+    .trim();
+}
+

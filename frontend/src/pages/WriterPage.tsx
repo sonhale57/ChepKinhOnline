@@ -3,11 +3,12 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { A4InkCanvas } from '../components/A4InkCanvas';
 import { TextPromptCard } from '../components/TextPromptCard';
 import { SidebarTools } from '../components/SidebarTools';
+import { HandwritingKeyStrip } from '../components/HandwritingKeyStrip';
 import { Navbar } from '../components/Navbar';
 import { apiClient } from '../api/client';
 import { inkStorage } from '../services/inkStorage';
 import { recognizeStrokes } from '../services/handwritingService';
-import { matchHandwritingWithTarget } from '../utils/fuzzyMatcher';
+import { matchHandwritingWithTarget, cleanAndFormatHandwritingStream } from '../utils/fuzzyMatcher';
 import type {
   SutraDetail,
   SutraPage,
@@ -505,7 +506,8 @@ export const WriterPage: React.FC = () => {
       try {
         const result = await recognizeStrokes(validStrokes, sutra?.scriptType || 'QUOC_NGU');
         if (result && result.text) {
-          setRecognizedText(result.text);
+          const formattedText = cleanAndFormatHandwritingStream(result.text);
+          setRecognizedText(formattedText);
 
           // Lấy nội dung 5 dòng của đoạn hiện tại
           const rawLines = (fullSutraContent || '')
@@ -519,7 +521,7 @@ export const WriterPage: React.FC = () => {
           );
 
           const matchRes = matchHandwritingWithTarget(
-            result.text,
+            formattedText,
             chunkLines,
             sutra?.scriptType === 'HAN'
           );
@@ -546,16 +548,68 @@ export const WriterPage: React.FC = () => {
     [sutra, fullSutraContent, currentChunkIndex, completedChunks, handleCompletedChunksChange]
   );
 
-  // Debounce 1.4s tự động nhận diện chữ khi người dùng dừng nét vẽ
+  // Debounce 3.0s (3s) tự động nhận diện chữ khi người dùng dừng nét vẽ
   useEffect(() => {
     if (!autoRecognize || pageStrokes.length === 0) return;
 
     const timer = setTimeout(() => {
       triggerRecognition(pageStrokes);
-    }, 1400);
+    }, 3000);
 
     return () => clearTimeout(timer);
   }, [pageStrokes, autoRecognize, triggerRecognition]);
+
+  // Hành động phím ảo: Cách Chữ (Space)
+  const handleInsertSpace = useCallback(() => {
+    triggerRecognition(pageStrokes);
+    setRecognizedText((prev) => (prev ? `${prev.trimEnd()} ` : ' '));
+    showToast('Đã chèn dấu cách [Space]');
+  }, [pageStrokes, triggerRecognition]);
+
+  // Hành động phím ảo: Xuống Hàng (Enter)
+  const handleInsertNewline = useCallback(() => {
+    triggerRecognition(pageStrokes);
+    setRecognizedText((prev) => (prev ? `${prev.trimEnd()}\n` : '\n'));
+    showToast('Đã xuống dòng mới [Enter]');
+  }, [pageStrokes, triggerRecognition]);
+
+  // Hành động phím ảo: Xóa Từ Cuối Cùng (Backspace)
+  const handleDeleteLastWord = useCallback(() => {
+    setRecognizedText((prev) => {
+      if (!prev) return '';
+      const trimmed = prev.trimEnd();
+      const lastSpaceIdx = Math.max(trimmed.lastIndexOf(' '), trimmed.lastIndexOf('\n'));
+      const newText = lastSpaceIdx >= 0 ? trimmed.substring(0, lastSpaceIdx).trim() : '';
+
+      // Tính lại match score
+      const rawLines = (fullSutraContent || '')
+        .split(/\r?\n/)
+        .map((l) => l.trim())
+        .filter((l) => l.length > 0);
+      const chunkLines = rawLines.slice(
+        currentChunkIndex * 5,
+        (currentChunkIndex + 1) * 5
+      );
+      const matchRes = matchHandwritingWithTarget(
+        newText,
+        chunkLines,
+        sutra?.scriptType === 'HAN'
+      );
+      setSimilarityPercent(matchRes.similarityPercent);
+      setMatchedWords(matchRes.matchedWords);
+
+      return newText;
+    });
+    showToast('Đã xóa từ cuối cùng');
+  }, [fullSutraContent, currentChunkIndex, sutra]);
+
+  // Hành động phím ảo: Reset Văn Bản Đã Nhận Diện
+  const handleClearRecognizedText = useCallback(() => {
+    setRecognizedText('');
+    setSimilarityPercent(0);
+    setMatchedWords(new Set());
+    showToast('Đã làm mới văn bản nhận diện');
+  }, []);
 
   // Chuyển trang sổ tay A4
   const handlePrevPage = () => {
@@ -792,33 +846,43 @@ export const WriterPage: React.FC = () => {
           onRecognizeNow={() => triggerRecognition(pageStrokes)}
         />
 
-        {/* 2. KHỔ GIẤY A4 + THANH CÔNG CỤ DOCK CỐ ĐỊNH KẾ BÊN (Cao bằng khổ giấy) */}
-        <div className="w-full flex items-stretch justify-center gap-2 sm:gap-4 mt-2">
+        {/* 2. KHỔ GIẤY A4 + THANH CÔNG CỤ DOCK CỐ ĐỊNH KẾ BÊN + THANH PHÍM ẢO HỖ TRỢ */}
+        <div className="w-full flex items-stretch justify-center gap-1.5 sm:gap-3 mt-2">
           {dockPosition === 'left' && (
-            <SidebarTools
-              brushType={brushType}
-              onBrushTypeChange={setBrushType}
-              brushColor={brushColor}
-              onBrushColorChange={setBrushColor}
-              brushSize={brushSize}
-              onBrushSizeChange={setBrushSize}
-              gridType={gridType}
-              onGridTypeChange={setGridType}
-              paperType={paperType}
-              onPaperTypeChange={setPaperType}
-              penOnlyMode={penOnlyMode}
-              onTogglePenOnlyMode={() => setPenOnlyMode(!penOnlyMode)}
-              autoRecognize={autoRecognize}
-              onToggleAutoRecognize={() => setAutoRecognize(!autoRecognize)}
-              isRecognizing={isRecognizing}
-              canUndo={pageStrokes.length > 0}
-              canRedo={redoStack.length > 0}
-              onUndo={handleUndo}
-              onRedo={handleRedo}
-              onClear={handleClear}
-              dockPosition={dockPosition}
-              onToggleDockPosition={() => setDockPosition((prev) => (prev === 'left' ? 'right' : 'left'))}
-            />
+            <div className="flex items-stretch gap-1.5 shrink-0">
+              <SidebarTools
+                brushType={brushType}
+                onBrushTypeChange={setBrushType}
+                brushColor={brushColor}
+                onBrushColorChange={setBrushColor}
+                brushSize={brushSize}
+                onBrushSizeChange={setBrushSize}
+                gridType={gridType}
+                onGridTypeChange={setGridType}
+                paperType={paperType}
+                onPaperTypeChange={setPaperType}
+                penOnlyMode={penOnlyMode}
+                onTogglePenOnlyMode={() => setPenOnlyMode(!penOnlyMode)}
+                autoRecognize={autoRecognize}
+                onToggleAutoRecognize={() => setAutoRecognize(!autoRecognize)}
+                isRecognizing={isRecognizing}
+                canUndo={pageStrokes.length > 0}
+                canRedo={redoStack.length > 0}
+                onUndo={handleUndo}
+                onRedo={handleRedo}
+                onClear={handleClear}
+                dockPosition={dockPosition}
+                onToggleDockPosition={() => setDockPosition((prev) => (prev === 'left' ? 'right' : 'left'))}
+              />
+              <HandwritingKeyStrip
+                onInsertSpace={handleInsertSpace}
+                onInsertNewline={handleInsertNewline}
+                onDeleteLastWord={handleDeleteLastWord}
+                onClearText={handleClearRecognizedText}
+                onRecognizeNow={() => triggerRecognition(pageStrokes)}
+                isRecognizing={isRecognizing}
+              />
+            </div>
           )}
 
           {/* Vùng Canvas A4 Sổ Tay */}
@@ -839,30 +903,40 @@ export const WriterPage: React.FC = () => {
           </div>
 
           {dockPosition === 'right' && (
-            <SidebarTools
-              brushType={brushType}
-              onBrushTypeChange={setBrushType}
-              brushColor={brushColor}
-              onBrushColorChange={setBrushColor}
-              brushSize={brushSize}
-              onBrushSizeChange={setBrushSize}
-              gridType={gridType}
-              onGridTypeChange={setGridType}
-              paperType={paperType}
-              onPaperTypeChange={setPaperType}
-              penOnlyMode={penOnlyMode}
-              onTogglePenOnlyMode={() => setPenOnlyMode(!penOnlyMode)}
-              autoRecognize={autoRecognize}
-              onToggleAutoRecognize={() => setAutoRecognize(!autoRecognize)}
-              isRecognizing={isRecognizing}
-              canUndo={pageStrokes.length > 0}
-              canRedo={redoStack.length > 0}
-              onUndo={handleUndo}
-              onRedo={handleRedo}
-              onClear={handleClear}
-              dockPosition={dockPosition}
-              onToggleDockPosition={() => setDockPosition((prev) => (prev === 'left' ? 'right' : 'left'))}
-            />
+            <div className="flex items-stretch gap-1.5 shrink-0">
+              <HandwritingKeyStrip
+                onInsertSpace={handleInsertSpace}
+                onInsertNewline={handleInsertNewline}
+                onDeleteLastWord={handleDeleteLastWord}
+                onClearText={handleClearRecognizedText}
+                onRecognizeNow={() => triggerRecognition(pageStrokes)}
+                isRecognizing={isRecognizing}
+              />
+              <SidebarTools
+                brushType={brushType}
+                onBrushTypeChange={setBrushType}
+                brushColor={brushColor}
+                onBrushColorChange={setBrushColor}
+                brushSize={brushSize}
+                onBrushSizeChange={setBrushSize}
+                gridType={gridType}
+                onGridTypeChange={setGridType}
+                paperType={paperType}
+                onPaperTypeChange={setPaperType}
+                penOnlyMode={penOnlyMode}
+                onTogglePenOnlyMode={() => setPenOnlyMode(!penOnlyMode)}
+                autoRecognize={autoRecognize}
+                onToggleAutoRecognize={() => setAutoRecognize(!autoRecognize)}
+                isRecognizing={isRecognizing}
+                canUndo={pageStrokes.length > 0}
+                canRedo={redoStack.length > 0}
+                onUndo={handleUndo}
+                onRedo={handleRedo}
+                onClear={handleClear}
+                dockPosition={dockPosition}
+                onToggleDockPosition={() => setDockPosition((prev) => (prev === 'left' ? 'right' : 'left'))}
+              />
+            </div>
           )}
         </div>
       </main>
