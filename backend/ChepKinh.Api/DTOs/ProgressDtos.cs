@@ -26,6 +26,7 @@ namespace ChepKinh.Api.DTOs
         public long AttemptId { get; set; }
         public long PageId { get; set; }
         public string StrokesDataJson { get; set; } = "[]";
+        public string? RecognizedText { get; set; }
         public bool IsPageCompleted { get; set; }
         public double? ProgressPercent { get; set; }
         public int? CompletedWords { get; set; }
@@ -52,6 +53,7 @@ namespace ChepKinh.Api.DTOs
         public long AttemptId { get; set; }
         public long PageId { get; set; }
         public string StrokesDataJson { get; set; } = "[]";
+        public string? RecognizedText { get; set; }
         public bool IsPageCompleted { get; set; }
         public double AttemptProgressPercent { get; set; }
         public int TotalCompletedWords { get; set; }

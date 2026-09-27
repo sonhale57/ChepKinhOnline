@@ -13,7 +13,8 @@ import {
   Hand,
   PenLine,
   ArrowLeftRight,
-  X
+  X,
+  Sparkles
 } from 'lucide-react';
 
 interface SidebarToolsProps {
@@ -29,6 +30,9 @@ interface SidebarToolsProps {
   onPaperTypeChange: (type: PaperType) => void;
   penOnlyMode: boolean;
   onTogglePenOnlyMode: () => void;
+  autoRecognize?: boolean;
+  onToggleAutoRecognize?: () => void;
+  isRecognizing?: boolean;
   canUndo: boolean;
   canRedo: boolean;
   onUndo: () => void;
@@ -65,6 +69,9 @@ export const SidebarTools: React.FC<SidebarToolsProps> = ({
   onPaperTypeChange,
   penOnlyMode,
   onTogglePenOnlyMode,
+  autoRecognize = true,
+  onToggleAutoRecognize,
+  isRecognizing = false,
   canUndo,
   canRedo,
   onUndo,
@@ -194,8 +201,31 @@ export const SidebarTools: React.FC<SidebarToolsProps> = ({
           </button>
         </div>
 
-        {/* Nhóm 5: Chống Tì Tay, Đổi Nền & Đảo Vị Trí */}
+        {/* Nhóm 5: Chống Tì Tay, AI Nhận Diện, Đổi Nền & Đảo Vị Trí */}
         <div className="flex flex-col items-center gap-1">
+          {onToggleAutoRecognize && (
+            <button
+              type="button"
+              onClick={onToggleAutoRecognize}
+              className={`w-7.5 h-7.5 rounded-lg flex items-center justify-center transition-all cursor-pointer relative ${autoRecognize
+                ? 'bg-amber-900 text-amber-200 shadow-xs ring-1 ring-amber-700/50'
+                : 'text-amber-950/40 hover:bg-amber-100/60'
+                }`}
+              title={
+                autoRecognize
+                  ? isRecognizing
+                    ? 'AI đang nhận diện chữ viết tay...'
+                    : 'Tự động nhận diện chữ & khớp đoạn: ĐANG BẬT'
+                  : 'Tự động nhận diện chữ & khớp đoạn: ĐANG TẮT'
+              }
+            >
+              <Sparkles className={`w-3.5 h-3.5 ${isRecognizing ? 'animate-spin text-amber-300' : ''}`} />
+              {autoRecognize && (
+                <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              )}
+            </button>
+          )}
+
           <button
             type="button"
             onClick={onTogglePenOnlyMode}

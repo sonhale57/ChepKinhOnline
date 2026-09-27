@@ -120,6 +120,7 @@ namespace ChepKinh.Api.Services
                 AttemptId = stroke.AttemptId,
                 PageId = stroke.PageId,
                 StrokesDataJson = stroke.StrokesDataJson,
+                RecognizedText = stroke.RecognizedText,
                 IsPageCompleted = stroke.IsPageCompleted,
                 UpdatedAt = stroke.UpdatedAt
             };
@@ -145,6 +146,7 @@ namespace ChepKinh.Api.Services
                     PageId = dto.PageId,
                     UserId = userId,
                     StrokesDataJson = dto.StrokesDataJson,
+                    RecognizedText = dto.RecognizedText,
                     IsPageCompleted = dto.IsPageCompleted,
                     CompletedAt = dto.IsPageCompleted ? DateTime.UtcNow : null,
                     UpdatedAt = DateTime.UtcNow
@@ -154,6 +156,10 @@ namespace ChepKinh.Api.Services
             else
             {
                 pageStroke.StrokesDataJson = dto.StrokesDataJson;
+                if (!string.IsNullOrEmpty(dto.RecognizedText))
+                {
+                    pageStroke.RecognizedText = dto.RecognizedText;
+                }
                 pageStroke.IsPageCompleted = dto.IsPageCompleted;
                 if (dto.IsPageCompleted && !pageStroke.CompletedAt.HasValue)
                 {

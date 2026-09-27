@@ -131,6 +131,7 @@ namespace ChepKinh.Api.Models
 
         public long UserId { get; set; }
         public string StrokesDataJson { get; set; } = "[]"; // Vector JSON
+        public string? RecognizedText { get; set; } // Văn bản nhận diện từ nét viết
         public bool IsPageCompleted { get; set; }
         public DateTime? CompletedAt { get; set; }
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

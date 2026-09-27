@@ -6,6 +6,8 @@ import { SidebarTools } from '../components/SidebarTools';
 import { Navbar } from '../components/Navbar';
 import { apiClient } from '../api/client';
 import { inkStorage } from '../services/inkStorage';
+import { recognizeStrokes } from '../services/handwritingService';
+import { matchHandwritingWithTarget } from '../utils/fuzzyMatcher';
 import type {
   SutraDetail,
   SutraPage,
@@ -58,6 +60,13 @@ export const WriterPage: React.FC = () => {
   const [matchedChunksCount, setMatchedChunksCount] = useState<number>(0);
   const [totalChunksCount, setTotalChunksCount] = useState<number>(1);
   const [matchPercent, setMatchPercent] = useState<number>(0);
+
+  // AI Handwriting Recognition & Auto Match
+  const [autoRecognize, setAutoRecognize] = useState<boolean>(true);
+  const [isRecognizing, setIsRecognizing] = useState<boolean>(false);
+  const [recognizedText, setRecognizedText] = useState<string>('');
+  const [similarityPercent, setSimilarityPercent] = useState<number>(0);
+  const [matchedWords, setMatchedWords] = useState<Set<string>>(new Set());
 
   // Modal chúc mừng, Chứng nhận & Xuất bản PDF
   const [showCelebrationModal, setShowCelebrationModal] = useState<boolean>(false);
@@ -481,6 +490,73 @@ export const WriterPage: React.FC = () => {
     [totalChunksCount, currentPageIndex, extraPages, persistProgress, matchPercent]
   );
 
+  // Kích hoạt nhận diện chữ viết tay & so khớp với đoạn 5 dòng hiện tại
+  const triggerRecognition = useCallback(
+    async (strokesToRecognize: Stroke[]) => {
+      const validStrokes = strokesToRecognize.filter((s) => s.brushType !== 'ERASER' && s.points && s.points.length > 0);
+      if (validStrokes.length === 0) {
+        setRecognizedText('');
+        setSimilarityPercent(0);
+        setMatchedWords(new Set());
+        return;
+      }
+
+      setIsRecognizing(true);
+      try {
+        const result = await recognizeStrokes(validStrokes, sutra?.scriptType || 'QUOC_NGU');
+        if (result && result.text) {
+          setRecognizedText(result.text);
+
+          // Lấy nội dung 5 dòng của đoạn hiện tại
+          const rawLines = (fullSutraContent || '')
+            .split(/\r?\n/)
+            .map((l) => l.trim())
+            .filter((l) => l.length > 0);
+
+          const chunkLines = rawLines.slice(
+            currentChunkIndex * 5,
+            (currentChunkIndex + 1) * 5
+          );
+
+          const matchRes = matchHandwritingWithTarget(
+            result.text,
+            chunkLines,
+            sutra?.scriptType === 'HAN'
+          );
+
+          setSimilarityPercent(matchRes.similarityPercent);
+          setMatchedWords(matchRes.matchedWords);
+
+          // Tự động đánh dấu hoàn thành đoạn nếu đạt ngưỡng >= 70% và chưa hoàn thành
+          if (matchRes.isMatched && !completedChunks[currentChunkIndex]) {
+            const updated = {
+              ...completedChunks,
+              [currentChunkIndex]: true,
+            };
+            handleCompletedChunksChange(updated, currentChunkIndex);
+            showToast('✨ AI đã nhận diện khớp đoạn kinh!');
+          }
+        }
+      } catch (err) {
+        console.warn('[Handwriting] Recognition error:', err);
+      } finally {
+        setIsRecognizing(false);
+      }
+    },
+    [sutra, fullSutraContent, currentChunkIndex, completedChunks, handleCompletedChunksChange]
+  );
+
+  // Debounce 1.4s tự động nhận diện chữ khi người dùng dừng nét vẽ
+  useEffect(() => {
+    if (!autoRecognize || pageStrokes.length === 0) return;
+
+    const timer = setTimeout(() => {
+      triggerRecognition(pageStrokes);
+    }, 1400);
+
+    return () => clearTimeout(timer);
+  }, [pageStrokes, autoRecognize, triggerRecognition]);
+
   // Chuyển trang sổ tay A4
   const handlePrevPage = () => {
     if (currentPageIndex > 0) {
@@ -709,6 +785,11 @@ export const WriterPage: React.FC = () => {
           onAddNewPage={handleAddNewPage}
           onProgressUpdate={handleProgressUpdate}
           onCompletedChunksChange={handleCompletedChunksChange}
+          recognizedText={recognizedText}
+          isRecognizing={isRecognizing}
+          similarityPercent={similarityPercent}
+          matchedWords={matchedWords}
+          onRecognizeNow={() => triggerRecognition(pageStrokes)}
         />
 
         {/* 2. KHỔ GIẤY A4 + THANH CÔNG CỤ DOCK CỐ ĐỊNH KẾ BÊN (Cao bằng khổ giấy) */}
@@ -727,6 +808,9 @@ export const WriterPage: React.FC = () => {
               onPaperTypeChange={setPaperType}
               penOnlyMode={penOnlyMode}
               onTogglePenOnlyMode={() => setPenOnlyMode(!penOnlyMode)}
+              autoRecognize={autoRecognize}
+              onToggleAutoRecognize={() => setAutoRecognize(!autoRecognize)}
+              isRecognizing={isRecognizing}
               canUndo={pageStrokes.length > 0}
               canRedo={redoStack.length > 0}
               onUndo={handleUndo}
@@ -768,6 +852,9 @@ export const WriterPage: React.FC = () => {
               onPaperTypeChange={setPaperType}
               penOnlyMode={penOnlyMode}
               onTogglePenOnlyMode={() => setPenOnlyMode(!penOnlyMode)}
+              autoRecognize={autoRecognize}
+              onToggleAutoRecognize={() => setAutoRecognize(!autoRecognize)}
+              isRecognizing={isRecognizing}
               canUndo={pageStrokes.length > 0}
               canRedo={redoStack.length > 0}
               onUndo={handleUndo}

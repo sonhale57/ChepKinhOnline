@@ -9,7 +9,9 @@ import {
   Check,
   Plus,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Sparkles,
+  Loader2
 } from 'lucide-react';
 import type { ScriptType } from '../types';
 
@@ -27,6 +29,11 @@ interface TextPromptCardProps {
   onNextPage: () => void;
   onAddNewPage?: () => void;
   className?: string;
+  recognizedText?: string;
+  isRecognizing?: boolean;
+  similarityPercent?: number;
+  matchedWords?: Set<string>;
+  onRecognizeNow?: () => void;
 }
 
 const LINES_PER_CHUNK = 5;
@@ -45,6 +52,11 @@ export const TextPromptCard: React.FC<TextPromptCardProps> = ({
   onNextPage,
   onAddNewPage,
   className = '',
+  recognizedText = '',
+  isRecognizing = false,
+  similarityPercent = 0,
+  matchedWords,
+  onRecognizeNow,
 }) => {
   const [currentChunkIndex, setCurrentChunkIndex] = useState<number>(initialChunkIndex);
   const [completedChunks, setCompletedChunks] = useState<Record<number, boolean>>(initialCompletedChunks || {});
@@ -205,20 +217,90 @@ export const TextPromptCard: React.FC<TextPromptCardProps> = ({
               className={`tracking-wide transition-all duration-300 ${scriptType === 'HAN' ? 'text-lg sm:text-xl leading-loose font-medium' : 'text-xs sm:text-sm leading-relaxed'
                 } text-amber-100`}
             >
-              {currentLines.map((line, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-baseline gap-2 py-0.5 hover:bg-white/5 rounded px-1.5 transition-colors"
-                >
-                  <span className="text-[11px] text-amber-500/70 select-none w-5 text-right shrink-0">
-                    {startLineNumber + idx}.
-                  </span>
-                  <span className="flex-1 select-text selection:bg-amber-700 selection:text-white">
-                    {line}
-                  </span>
-                </div>
-              ))}
+              {currentLines.map((line, idx) => {
+                // Tách từ để highlight nếu khớp
+                const isHan = scriptType === 'HAN';
+                const tokens = isHan ? Array.from(line) : line.split(' ');
+
+                return (
+                  <div
+                    key={idx}
+                    className="flex items-baseline gap-2 py-0.5 hover:bg-white/5 rounded px-1.5 transition-colors"
+                  >
+                    <span className="text-[11px] text-amber-500/70 select-none w-5 text-right shrink-0">
+                      {startLineNumber + idx}.
+                    </span>
+                    <span className="flex-1 select-text selection:bg-amber-700 selection:text-white">
+                      {tokens.map((token, tIdx) => {
+                        const cleanToken = token.toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()?"'“”…]/g, '');
+                        const isWordMatched = matchedWords && cleanToken && matchedWords.has(cleanToken);
+
+                        return (
+                          <span
+                            key={tIdx}
+                            className={`transition-colors ${isWordMatched
+                              ? 'text-emerald-300 font-bold bg-emerald-950/60 px-1 py-0.5 rounded shadow-xs'
+                              : 'text-amber-100'
+                              } ${!isHan ? 'mr-1' : ''}`}
+                          >
+                            {token}
+                          </span>
+                        );
+                      })}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
+
+            {/* Dải HUD AI Nhận Diện Chữ Viết Tay Thời Gian Thực */}
+            {(isRecognizing || recognizedText || onRecognizeNow) && (
+              <div className="mt-2.5 pt-2 border-t border-amber-900/60 flex items-center justify-between gap-2 text-[11px] flex-wrap">
+                <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                  <span className="p-1 rounded bg-amber-900/60 text-amber-300 shrink-0">
+                    <Sparkles className={`w-3 h-3 ${isRecognizing ? 'animate-spin text-amber-300' : ''}`} />
+                  </span>
+                  {isRecognizing ? (
+                    <span className="text-amber-300/90 italic flex items-center gap-1 animate-pulse">
+                      <Loader2 className="w-3 h-3 animate-spin inline" />
+                      AI đang đọc nét chữ viết tay...
+                    </span>
+                  ) : recognizedText ? (
+                    <div className="truncate flex items-center gap-1.5 text-amber-200">
+                      <span className="text-amber-400 font-semibold shrink-0">AI nhận diện:</span>
+                      <span className="truncate italic text-amber-100 font-mono bg-black/40 px-1.5 py-0.5 rounded border border-amber-900/50">
+                        "{recognizedText}"
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-amber-400/60 italic">
+                      Viết nét chữ lên giấy để AI tự động nhận diện thành văn bản...
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {similarityPercent > 0 && (
+                    <span className={`px-1.5 py-0.5 rounded font-bold text-[10px] border ${similarityPercent >= 70
+                      ? 'bg-emerald-950/80 text-emerald-300 border-emerald-700/60'
+                      : 'bg-amber-900/80 text-amber-200 border-amber-700/60'
+                      }`}>
+                      Độ khớp: {similarityPercent}%
+                    </span>
+                  )}
+                  {onRecognizeNow && !isRecognizing && (
+                    <button
+                      type="button"
+                      onClick={onRecognizeNow}
+                      className="px-2 py-0.5 rounded bg-amber-900 hover:bg-amber-800 text-amber-200 text-[10.5px] font-bold transition-all border border-amber-700/50 cursor-pointer active:scale-95"
+                      title="Nhận diện lại nét chữ trên trang ngay lập tức"
+                    >
+                      Nhận diện ngay
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="my-1.5 py-1 px-2.5 bg-black/30 rounded-lg border border-amber-900/50 flex items-center justify-between text-xs text-amber-200">
@@ -226,6 +308,11 @@ export const TextPromptCard: React.FC<TextPromptCardProps> = ({
               <strong className="text-amber-400 not-italic mr-1">{startLineNumber}.</strong>
               {currentLines[0] || '...'} {currentLines.length > 1 && '...'}
             </span>
+            {similarityPercent > 0 && (
+              <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded shrink-0 border ${similarityPercent >= 70 ? 'bg-emerald-900/80 text-emerald-200 border-emerald-700' : 'bg-amber-900/80 text-amber-200 border-amber-700'}`}>
+                {similarityPercent}%
+              </span>
+            )}
           </div>
         )}
 
