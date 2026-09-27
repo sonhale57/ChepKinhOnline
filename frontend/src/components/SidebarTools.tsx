@@ -4,6 +4,7 @@ import {
   Paintbrush,
   PenTool,
   Pencil,
+  Eraser,
   Undo2,
   Redo2,
   Trash2,
@@ -114,10 +115,21 @@ export const SidebarTools: React.FC<SidebarToolsProps> = ({
           >
             <Pencil className="w-3.5 h-3.5" />
           </button>
+          <button
+            type="button"
+            onClick={() => onBrushTypeChange('ERASER')}
+            className={`w-7.5 h-7.5 rounded-md flex items-center justify-center transition-all cursor-pointer ${brushType === 'ERASER'
+              ? 'bg-amber-900 text-white shadow-xs'
+              : 'text-amber-950/70 hover:bg-amber-100/60'
+              }`}
+            title="Cục Tẩy (Xóa nét vẽ)"
+          >
+            <Eraser className="w-3.5 h-3.5" />
+          </button>
         </div>
 
         {/* Nhóm 2: Bảng Màu Mực */}
-        <div className="flex flex-col items-center gap-2 p-1.5 bg-amber-50/70 rounded-lg border border-amber-900/10 w-full">
+        <div className={`flex flex-col items-center gap-2 p-1.5 bg-amber-50/70 rounded-lg border border-amber-900/10 w-full transition-opacity ${brushType === 'ERASER' ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}>
           {BRUSH_COLORS.map((col) => (
             <button
               key={col.value}

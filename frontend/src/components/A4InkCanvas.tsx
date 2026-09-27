@@ -165,6 +165,9 @@ export const A4InkCanvas: React.FC<A4InkCanvasProps> = ({
       case 'PENCIL':
         // Nét chì thanh mảnh, độ biến thiên nhẹ
         return baseSize * (0.6 + p * 0.5);
+      case 'ERASER':
+        // Cục tẩy có diện tích tiếp xúc rộng hơn để dễ xóa sạch nét
+        return baseSize * 2.8;
       case 'PEN':
       default:
         // Nét mực bút kim / bút bi đều và tròn trịa
@@ -178,8 +181,15 @@ export const A4InkCanvas: React.FC<A4InkCanvasProps> = ({
     if (!pts || pts.length === 0) return;
 
     ctx.save();
-    ctx.strokeStyle = stroke.color;
-    ctx.fillStyle = stroke.color;
+    if (stroke.brushType === 'ERASER') {
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.strokeStyle = 'rgba(0,0,0,1)';
+      ctx.fillStyle = 'rgba(0,0,0,1)';
+    } else {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = stroke.color;
+      ctx.fillStyle = stroke.color;
+    }
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
@@ -327,7 +337,13 @@ export const A4InkCanvas: React.FC<A4InkCanvasProps> = ({
       const ctx = canvas.getContext('2d');
       if (ctx) {
         ctx.save();
-        ctx.fillStyle = brushColor;
+        if (brushType === 'ERASER') {
+          ctx.globalCompositeOperation = 'destination-out';
+          ctx.fillStyle = 'rgba(0,0,0,1)';
+        } else {
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.fillStyle = brushColor;
+        }
         const initialWidth = getStrokeWidth(brushSize, brushType, rawPt.pressure);
         ctx.beginPath();
         ctx.arc(rawPt.x, rawPt.y, initialWidth / 2, 0, Math.PI * 2);
@@ -361,8 +377,15 @@ export const A4InkCanvas: React.FC<A4InkCanvasProps> = ({
     if (!ctx) return;
 
     ctx.save();
-    ctx.strokeStyle = brushColor;
-    ctx.fillStyle = brushColor;
+    if (brushType === 'ERASER') {
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.strokeStyle = 'rgba(0,0,0,1)';
+      ctx.fillStyle = 'rgba(0,0,0,1)';
+    } else {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = brushColor;
+      ctx.fillStyle = brushColor;
+    }
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 

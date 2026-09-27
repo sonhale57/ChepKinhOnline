@@ -28,6 +28,8 @@ function getStrokeWidth(baseSize: number, bType: BrushType, pressure: number): n
       return baseSize * (0.2 + p * 1.5);
     case 'PENCIL':
       return baseSize * (0.6 + p * 0.5);
+    case 'ERASER':
+      return baseSize * 2.8;
     case 'PEN':
     default:
       return baseSize * (0.75 + p * 0.35);
@@ -39,8 +41,15 @@ function drawCompleteStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
   if (!pts || pts.length === 0) return;
 
   ctx.save();
-  ctx.strokeStyle = stroke.color;
-  ctx.fillStyle = stroke.color;
+  if (stroke.brushType === 'ERASER') {
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.strokeStyle = 'rgba(0,0,0,1)';
+    ctx.fillStyle = 'rgba(0,0,0,1)';
+  } else {
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.strokeStyle = stroke.color;
+    ctx.fillStyle = stroke.color;
+  }
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 

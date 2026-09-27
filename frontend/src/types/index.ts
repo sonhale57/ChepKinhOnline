@@ -1,7 +1,7 @@
 export type ScriptType = 'QUOC_NGU' | 'HAN' | 'PALI';
 export type GridType = 'GRID_OLY' | 'GRID_HAN' | 'LINE' | 'BLANK';
 export type PaperType = 'DO' | 'OLD_GOLD' | 'WHITE';
-export type BrushType = 'CALLIGRAPHY' | 'PEN' | 'PENCIL';
+export type BrushType = 'CALLIGRAPHY' | 'PEN' | 'PENCIL' | 'ERASER';
 
 export interface Point {
   x: number;

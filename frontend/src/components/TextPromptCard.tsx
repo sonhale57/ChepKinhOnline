@@ -7,7 +7,9 @@ import {
   ArrowRight,
   CheckCircle2,
   Check,
-  Plus
+  Plus,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import type { ScriptType } from '../types';
 
@@ -24,6 +26,7 @@ interface TextPromptCardProps {
   onPrevPage: () => void;
   onNextPage: () => void;
   onAddNewPage?: () => void;
+  className?: string;
 }
 
 const LINES_PER_CHUNK = 5;
@@ -41,9 +44,11 @@ export const TextPromptCard: React.FC<TextPromptCardProps> = ({
   onPrevPage,
   onNextPage,
   onAddNewPage,
+  className = '',
 }) => {
   const [currentChunkIndex, setCurrentChunkIndex] = useState<number>(initialChunkIndex);
   const [completedChunks, setCompletedChunks] = useState<Record<number, boolean>>(initialCompletedChunks || {});
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
 
   // Đồng bộ khi initial props từ DB/IndexedDB nạp xong
   useEffect(() => {
@@ -142,19 +147,19 @@ export const TextPromptCard: React.FC<TextPromptCardProps> = ({
   };
 
   return (
-    <div className="w-full mx-auto mb-3">
-      <div className="bg-amber-950/90 backdrop-blur-md text-amber-50 rounded-lg p-3 sm:p-4 border border-amber-800/40 shadow-paper transition-all">
+    <div className={`w-full mx-auto mb-2.5 sticky top-[44px] sm:top-[48px] z-20 transition-all ${className}`}>
+      <div className="bg-amber-950/95 backdrop-blur-md text-amber-50 rounded-xl p-2.5 sm:p-3.5 border border-amber-800/50 shadow-paper-lg transition-all">
         {/* Header Bảng Nhắc Chữ */}
-        <div className="flex items-center justify-between gap-2 pb-2 border-b border-amber-800/50 mb-2.5 text-xs">
+        <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-amber-800/40 text-xs">
           <div className="flex items-center gap-1.5">
             <span className="p-1 bg-amber-800/60 rounded-md text-amber-300">
               <BookOpen className="w-3.5 h-3.5" />
             </span>
             <div>
-              <span className="font-bold text-amber-200 tracking-wide">
-                BẢNG NHẮC CHỮ KINH (5 DÒNG)
+              <span className="font-bold text-amber-200 tracking-wide text-xs sm:text-sm">
+                BẢNG NHẮC CHỮ KINH
               </span>
-              <span className="text-amber-400/70 ml-2 text-[11px]">
+              <span className="text-amber-400/80 ml-2 text-[11px]">
                 Dòng {startLineNumber} → {endLineNumber}
               </span>
             </div>
@@ -164,46 +169,75 @@ export const TextPromptCard: React.FC<TextPromptCardProps> = ({
             {isChunkDone && (
               <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-300 bg-emerald-950/60 border border-emerald-700/60 px-1.5 py-0.5 rounded">
                 <CheckCircle2 className="w-3 h-3" />
-                <span>Đã Khớp Đoạn</span>
+                <span className="hidden sm:inline">Đã Khớp</span>
               </span>
             )}
             <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-amber-900/80 text-amber-200 border border-amber-800">
               Đoạn {currentChunkIndex + 1}/{chunks.length}
             </span>
+
+            {/* Nút Thu gọn / Mở rộng bảng nhắc chữ */}
+            <button
+              type="button"
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="h-6 px-1.5 rounded bg-amber-900/60 hover:bg-amber-800 text-amber-300 flex items-center gap-0.5 transition-all text-[11px] font-semibold border border-amber-800/60 cursor-pointer"
+              title={isCollapsed ? 'Mở rộng 5 dòng nhắc' : 'Thu gọn bảng nhắc'}
+            >
+              {isCollapsed ? (
+                <>
+                  <ChevronDown className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Mở rộng</span>
+                </>
+              ) : (
+                <>
+                  <ChevronUp className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Thu gọn</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
 
-        {/* Nội Dung 5 Dòng Text Nhắc */}
-        <div className="min-h-[120px] sm:min-h-[140px] flex flex-col justify-center bg-black/25 rounded-md p-3 sm:p-4 border border-amber-900/40">
-          <div
-            className={`tracking-wide transition-all duration-300 ${scriptType === 'HAN' ? 'text-lg sm:text-xl leading-loose font-medium' : 'text-sm sm:text-base leading-relaxed'
-              } text-amber-100`}
-          >
-            {currentLines.map((line, idx) => (
-              <div
-                key={idx}
-                className="flex items-baseline gap-2 py-0.5 hover:bg-white/5 rounded px-1.5 transition-colors"
-              >
-                <span className="text-[11px] text-amber-500/60 select-none w-5 text-right shrink-0">
-                  {startLineNumber + idx}.
-                </span>
-                <span className="flex-1 select-text selection:bg-amber-700 selection:text-white">
-                  {line}
-                </span>
-              </div>
-            ))}
+        {/* Nội Dung Text Nhắc: Đầy đủ 5 dòng hoặc Thu gọn 1 dòng */}
+        {!isCollapsed ? (
+          <div className="my-2 min-h-[100px] sm:min-h-[120px] flex flex-col justify-center bg-black/30 rounded-lg p-2.5 sm:p-3.5 border border-amber-900/50">
+            <div
+              className={`tracking-wide transition-all duration-300 ${scriptType === 'HAN' ? 'text-lg sm:text-xl leading-loose font-medium' : 'text-xs sm:text-sm leading-relaxed'
+                } text-amber-100`}
+            >
+              {currentLines.map((line, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-baseline gap-2 py-0.5 hover:bg-white/5 rounded px-1.5 transition-colors"
+                >
+                  <span className="text-[11px] text-amber-500/70 select-none w-5 text-right shrink-0">
+                    {startLineNumber + idx}.
+                  </span>
+                  <span className="flex-1 select-text selection:bg-amber-700 selection:text-white">
+                    {line}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="my-1.5 py-1 px-2.5 bg-black/30 rounded-lg border border-amber-900/50 flex items-center justify-between text-xs text-amber-200">
+            <span className="truncate flex-1 italic text-amber-100/90 pr-2 text-[11.5px]">
+              <strong className="text-amber-400 not-italic mr-1">{startLineNumber}.</strong>
+              {currentLines[0] || '...'} {currentLines.length > 1 && '...'}
+            </span>
+          </div>
+        )}
 
         {/* Footer: Trái (Đoạn Trước, Đoạn Tiếp, Nút Đánh Dấu Khớp) - Phải (Trang Trước, Trang Sau, Thêm Trang) */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 mt-1 text-xs">
+        <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1 text-xs">
           {/* Vị trí bên trái: Nút Đoạn Trước, Đoạn Tiếp & NÚT ĐÁNH DẤU KHỚP */}
           <div className="flex items-center gap-1.5 flex-wrap">
             <button
               type="button"
               onClick={handlePrevChunk}
               disabled={currentChunkIndex === 0}
-              className="h-7.5 px-2.5 rounded-lg bg-amber-900/70 hover:bg-amber-800 disabled:opacity-30 active:scale-95 transition-all text-amber-100 text-xs font-bold flex items-center gap-1 border border-amber-700/50 cursor-pointer"
+              className="h-7 px-2 sm:px-2.5 rounded-lg bg-amber-900/70 hover:bg-amber-800 disabled:opacity-30 active:scale-95 transition-all text-amber-100 text-xs font-bold flex items-center gap-1 border border-amber-700/50 cursor-pointer"
               title="5 dòng trước"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
@@ -214,7 +248,7 @@ export const TextPromptCard: React.FC<TextPromptCardProps> = ({
               type="button"
               onClick={handleNextChunk}
               disabled={currentChunkIndex >= chunks.length - 1}
-              className="h-7.5 px-2.5 rounded-lg bg-amber-900/70 hover:bg-amber-800 disabled:opacity-30 active:scale-95 transition-all text-amber-100 text-xs font-bold flex items-center gap-1 border border-amber-700/50 cursor-pointer"
+              className="h-7 px-2 sm:px-2.5 rounded-lg bg-amber-900/70 hover:bg-amber-800 disabled:opacity-30 active:scale-95 transition-all text-amber-100 text-xs font-bold flex items-center gap-1 border border-amber-700/50 cursor-pointer"
               title="5 dòng tiếp theo"
             >
               <span>Đoạn Tiếp</span>
@@ -225,7 +259,7 @@ export const TextPromptCard: React.FC<TextPromptCardProps> = ({
             <button
               type="button"
               onClick={handleToggleMatch}
-              className={`h-7.5 px-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-xs border cursor-pointer ${isChunkDone
+              className={`h-7 px-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-xs border cursor-pointer ${isChunkDone
                 ? 'bg-emerald-600 text-white border-emerald-500 hover:bg-emerald-500'
                 : 'bg-amber-800/90 text-amber-100 border-amber-600/60 hover:bg-amber-700'
                 }`}
@@ -251,7 +285,7 @@ export const TextPromptCard: React.FC<TextPromptCardProps> = ({
               type="button"
               onClick={onPrevPage}
               disabled={pageNumber <= 1}
-              className="h-7.5 px-2.5 rounded-lg bg-amber-950/80 hover:bg-amber-900 disabled:opacity-30 active:scale-95 transition-all text-amber-200 text-xs font-bold flex items-center gap-1 border border-amber-800 cursor-pointer"
+              className="h-7 px-2.5 rounded-lg bg-amber-950/80 hover:bg-amber-900 disabled:opacity-30 active:scale-95 transition-all text-amber-200 text-xs font-bold flex items-center gap-1 border border-amber-800 cursor-pointer"
               title="Trang sổ A4 trước"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
@@ -260,7 +294,7 @@ export const TextPromptCard: React.FC<TextPromptCardProps> = ({
             <button
               type="button"
               onClick={onNextPage}
-              className="h-7.5 px-2.5 rounded-lg bg-amber-900 hover:bg-amber-800 active:scale-95 transition-all text-amber-200 text-xs font-bold flex items-center gap-1 border border-amber-800 cursor-pointer"
+              className="h-7 px-2.5 rounded-lg bg-amber-900 hover:bg-amber-800 active:scale-95 transition-all text-amber-200 text-xs font-bold flex items-center gap-1 border border-amber-800 cursor-pointer"
               title="Trang sổ A4 sau (Tự mở trang mới nếu ở cuối)"
             >
               <span>Trang {pageNumber + 1}</span>
@@ -271,7 +305,7 @@ export const TextPromptCard: React.FC<TextPromptCardProps> = ({
               <button
                 type="button"
                 onClick={onAddNewPage}
-                className="w-7.5 h-7.5 rounded-lg bg-amber-900 hover:bg-amber-800 active:scale-95 transition-all text-amber-200 border border-amber-700/60 flex items-center justify-center shadow-xs cursor-pointer p-0"
+                className="w-7 h-7 rounded-lg bg-amber-900 hover:bg-amber-800 active:scale-95 transition-all text-amber-200 border border-amber-700/60 flex items-center justify-center shadow-xs cursor-pointer p-0"
                 title="Thêm 1 trang A4 mới vào sổ tay"
               >
                 <Plus className="w-3.5 h-3.5" />
@@ -283,3 +317,4 @@ export const TextPromptCard: React.FC<TextPromptCardProps> = ({
     </div>
   );
 };
+
