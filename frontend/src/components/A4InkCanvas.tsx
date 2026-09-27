@@ -13,6 +13,8 @@ interface A4InkCanvasProps {
   onStrokesChange: (strokes: Stroke[]) => void;
   onUndo?: () => void;
   onRedo?: () => void;
+  printedText?: string;
+  isHanScript?: boolean;
 }
 
 // Chuẩn độ phân giải nội bộ khổ A4 (tỷ lệ 1 : 1.414 ở 150 DPI)
@@ -102,6 +104,8 @@ export const A4InkCanvas: React.FC<A4InkCanvasProps> = ({
   onStrokesChange,
   onUndo,
   onRedo,
+  printedText = '',
+  isHanScript = false,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -264,7 +268,81 @@ export const A4InkCanvas: React.FC<A4InkCanvasProps> = ({
     ctx.restore();
   }, [getStrokeWidth]);
 
-  // Render lại toàn bộ canvas khi undo/redo hoặc chuyển trang
+  // Vẽ văn bản số hóa in đẹp lên các dòng kẻ trang A4
+  const drawPrintedText = useCallback((ctx: CanvasRenderingContext2D, textToPrint: string, isHan: boolean = false) => {
+    if (!textToPrint || textToPrint.trim().length === 0) return;
+
+    ctx.save();
+    ctx.fillStyle = '#1A1817'; // Màu mực đen tuyền trang nhã
+    ctx.textBaseline = 'middle';
+
+    const startX = 80;
+    const endX = A4_INTERNAL_WIDTH - 80;
+    const maxLineWidth = endX - startX;
+    const startY = 135;
+    const lineHeight = isHan ? 65 : 56;
+
+    if (isHan) {
+      ctx.font = '500 36px "Noto Serif SC", "Songti SC", "SimSun", serif';
+      const chars = Array.from(textToPrint.replace(/\r/g, ''));
+      let curX = startX;
+      let curY = startY;
+
+      for (const ch of chars) {
+        if (ch === '\n') {
+          curX = startX;
+          curY += lineHeight;
+          continue;
+        }
+
+        const charWidth = ctx.measureText(ch).width;
+        if (curX + charWidth > endX) {
+          curX = startX;
+          curY += lineHeight;
+        }
+
+        if (curY > A4_INTERNAL_HEIGHT - 100) break; // Tránh tràn lề trang
+
+        ctx.fillText(ch, curX, curY);
+        curX += charWidth + 10;
+      }
+    } else {
+      // Tiếng Việt / Quốc ngữ: Font thư pháp / serif trang nhã
+      ctx.font = '500 30px "Nunito Sans", "Noto Serif", Georgia, serif';
+
+      const paragraphs = textToPrint.split('\n');
+      let curY = startY;
+
+      for (const paragraph of paragraphs) {
+        const words = paragraph.split(' ').filter(Boolean);
+        let currentLine = '';
+
+        for (const word of words) {
+          const testLine = currentLine ? `${currentLine} ${word}` : word;
+          const testWidth = ctx.measureText(testLine).width;
+
+          if (testWidth > maxLineWidth && currentLine) {
+            if (curY <= A4_INTERNAL_HEIGHT - 100) {
+              ctx.fillText(currentLine, startX, curY);
+            }
+            currentLine = word;
+            curY += lineHeight;
+          } else {
+            currentLine = testLine;
+          }
+        }
+
+        if (currentLine && curY <= A4_INTERNAL_HEIGHT - 100) {
+          ctx.fillText(currentLine, startX, curY);
+          curY += lineHeight;
+        }
+      }
+    }
+
+    ctx.restore();
+  }, []);
+
+  // Render lại toàn bộ canvas: Lớp Chữ In Đẹp trước -> Lớp Nét Viết Tay sau
   const redrawCanvas = useCallback((strokeList: Stroke[]) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -273,15 +351,21 @@ export const A4InkCanvas: React.FC<A4InkCanvasProps> = ({
 
     ctx.clearRect(0, 0, A4_INTERNAL_WIDTH, A4_INTERNAL_HEIGHT);
 
+    // 1. In lớp chữ số hóa đẹp đẽ (Typography Layer)
+    if (printedText) {
+      drawPrintedText(ctx, printedText, isHanScript);
+    }
+
+    // 2. Vẽ lớp nét bút mực tươi đang viết dở dang
     for (const stroke of strokeList) {
       drawCompleteStroke(ctx, stroke);
     }
-  }, [drawCompleteStroke]);
+  }, [drawCompleteStroke, drawPrintedText, printedText, isHanScript]);
 
-  // Vẽ lại khi danh sách strokes thay đổi
+  // Vẽ lại khi danh sách strokes hoặc printedText thay đổi
   useEffect(() => {
     redrawCanvas(strokes);
-  }, [strokes, redrawCanvas]);
+  }, [strokes, printedText, redrawCanvas]);
 
   // Lấy toạ độ chính xác 100% không bị lệch ngòi bút (Zero-Parallax Mapping)
   const getCanvasCoordinates = (e: React.PointerEvent<HTMLCanvasElement> | PointerEvent): Point => {

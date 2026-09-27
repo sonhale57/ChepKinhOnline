@@ -18,6 +18,17 @@ export interface Stroke {
   brushType: BrushType;
 }
 
+export interface PrintedTextItem {
+  id: string;
+  text: string;
+  x?: number;
+  y?: number;
+  color?: string;
+  fontSize?: number;
+  fontFamily?: string;
+  timestamp: number;
+}
+
 export interface SutraSummary {
   id: number;
   title: string;

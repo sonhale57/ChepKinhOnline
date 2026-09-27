@@ -275,6 +275,7 @@ export async function exportSutraNotebookPdf(options: ExportPdfOptions): Promise
     // Lấy nét vẽ từ IndexedDB trước
     const pageId = 1000 + pageIdx;
     let strokes: Stroke[] = [];
+    let recognizedText = '';
 
     const localData = await inkStorage.getPageStrokes(attemptId, pageId, userId);
     if (localData && localData.strokes) {
@@ -285,6 +286,7 @@ export async function exportSutraNotebookPdf(options: ExportPdfOptions): Promise
         const res = await apiClient.get(`/progress/strokes/${attemptId}/${pageId}`);
         if (res.data?.success && res.data.data?.strokesDataJson) {
           strokes = JSON.parse(res.data.data.strokesDataJson);
+          recognizedText = res.data.data.recognizedText || '';
         }
       } catch {
         strokes = [];
@@ -300,7 +302,65 @@ export async function exportSutraNotebookPdf(options: ExportPdfOptions): Promise
     // Vẽ nền, viền và lưới
     drawBackgroundAndGrid(ctx, pageNumber, totalNotebookPages);
 
-    // Vẽ các nét chữ thật
+    // Vẽ văn bản chữ in đẹp nếu có
+    if (recognizedText) {
+      ctx.save();
+      ctx.fillStyle = '#1A1817';
+      ctx.textBaseline = 'middle';
+      const startX = 80;
+      const endX = A4_INTERNAL_WIDTH - 80;
+      const maxLineWidth = endX - startX;
+      let curY = 135;
+      const lineHeight = scriptType === 'HAN' ? 65 : 56;
+
+      if (scriptType === 'HAN') {
+        ctx.font = '500 36px "Noto Serif SC", "Songti SC", "SimSun", serif';
+        const chars = Array.from(recognizedText.replace(/\r/g, ''));
+        let curX = startX;
+        for (const ch of chars) {
+          if (ch === '\n') {
+            curX = startX;
+            curY += lineHeight;
+            continue;
+          }
+          const charWidth = ctx.measureText(ch).width;
+          if (curX + charWidth > endX) {
+            curX = startX;
+            curY += lineHeight;
+          }
+          if (curY > A4_INTERNAL_HEIGHT - 100) break;
+          ctx.fillText(ch, curX, curY);
+          curX += charWidth + 10;
+        }
+      } else {
+        ctx.font = '500 30px "Nunito Sans", "Noto Serif", Georgia, serif';
+        const paragraphs = recognizedText.split('\n');
+        for (const paragraph of paragraphs) {
+          const words = paragraph.split(' ').filter(Boolean);
+          let currentLine = '';
+          for (const word of words) {
+            const testLine = currentLine ? `${currentLine} ${word}` : word;
+            const testWidth = ctx.measureText(testLine).width;
+            if (testWidth > maxLineWidth && currentLine) {
+              if (curY <= A4_INTERNAL_HEIGHT - 100) {
+                ctx.fillText(currentLine, startX, curY);
+              }
+              currentLine = word;
+              curY += lineHeight;
+            } else {
+              currentLine = testLine;
+            }
+          }
+          if (currentLine && curY <= A4_INTERNAL_HEIGHT - 100) {
+            ctx.fillText(currentLine, startX, curY);
+            curY += lineHeight;
+          }
+        }
+      }
+      ctx.restore();
+    }
+
+    // Vẽ các nét chữ còn lại
     for (const stroke of strokes) {
       drawCompleteStroke(ctx, stroke);
     }
